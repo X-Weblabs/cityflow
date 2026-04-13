@@ -70,6 +70,14 @@ export const deleteVehicle = async (vehicleId) => {
   await deleteDoc(doc(db, 'fleet', vehicleId));
 };
 
+export const updateVehicle = async (vehicleId, updates) => {
+  const vehicleRef = doc(db, 'fleet', vehicleId);
+  await updateDoc(vehicleRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+};
+
 // --- Fleet Team ---
 export const addTeamMember = async (memberData) => {
   const teamRef = collection(db, 'fleet_team');
@@ -95,4 +103,142 @@ export const subscribeToTeam = (callback) => {
 
 export const deleteTeamMember = async (memberId) => {
   await deleteDoc(doc(db, 'fleet_team', memberId));
+};
+
+export const updateTeamMember = async (memberId, updates) => {
+  const memberRef = doc(db, 'fleet_team', memberId);
+  await updateDoc(memberRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+};
+
+// --- Landfill Entries ---
+export const addLandfillEntry = async (entryData) => {
+  const entriesRef = collection(db, 'landfill_entries');
+  await addDoc(entriesRef, {
+    ...entryData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToLandfillEntries = (callback) => {
+  const entriesRef = collection(db, 'landfill_entries');
+  const q = query(entriesRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const entriesArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(entriesArray);
+  });
+  return unsubscribe;
+};
+
+// --- BWMT Deliveries ---
+export const addBWMTDelivery = async (deliveryData) => {
+  const deliveriesRef = collection(db, 'bwmt_deliveries');
+  await addDoc(deliveriesRef, {
+    ...deliveryData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToBWMTDeliveries = (callback) => {
+  const deliveriesRef = collection(db, 'bwmt_deliveries');
+  const q = query(deliveriesRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const deliveriesArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(deliveriesArray);
+  });
+  return unsubscribe;
+};
+
+// --- Landfill Sites ---
+export const addLandfillSite = async (siteData) => {
+  const sitesRef = collection(db, 'landfill_sites');
+  await addDoc(sitesRef, {
+    ...siteData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToLandfillSites = (callback) => {
+  const sitesRef = collection(db, 'landfill_sites');
+  const q = query(sitesRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const sitesArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(sitesArray);
+  });
+  return unsubscribe;
+};
+
+// --- Supervisors ---
+export const addSupervisor = async (supervisorData) => {
+  const supervisorsRef = collection(db, 'supervisors');
+  await addDoc(supervisorsRef, {
+    ...supervisorData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToSupervisors = (callback) => {
+  const supervisorsRef = collection(db, 'supervisors');
+  const q = query(supervisorsRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const supervisorsArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(supervisorsArray);
+  });
+  return unsubscribe;
+};
+
+export const deleteSupervisor = async (supervisorId) => {
+  await deleteDoc(doc(db, 'supervisors', supervisorId));
+};
+
+export const updateSupervisor = async (supervisorId, updates) => {
+  const supervisorRef = doc(db, 'supervisors', supervisorId);
+  await updateDoc(supervisorRef, {
+    ...updates,
+    updatedAt: serverTimestamp()
+  });
+};
+
+// --- Vehicle Issues ---
+export const addVehicleIssue = async (issueData) => {
+  const issuesRef = collection(db, 'vehicle_issues');
+  await addDoc(issuesRef, {
+    ...issueData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToVehicleIssues = (callback) => {
+  const issuesRef = collection(db, 'vehicle_issues');
+  const q = query(issuesRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const issuesArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(issuesArray);
+  });
+  return unsubscribe;
 };

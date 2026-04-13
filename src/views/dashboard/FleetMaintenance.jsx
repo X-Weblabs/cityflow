@@ -3,9 +3,15 @@ import {
   subscribeToFleet, 
   addVehicle, 
   deleteVehicle, 
+  updateVehicle,
   subscribeToTeam, 
   addTeamMember, 
-  deleteTeamMember 
+  deleteTeamMember,
+  updateTeamMember,
+  subscribeToSupervisors,
+  addSupervisor,
+  deleteSupervisor,
+  updateSupervisor
 } from '../../services/db';
 import { 
   Plus, 
@@ -14,7 +20,9 @@ import {
   Trash2, 
   MoreVertical, 
   X,
+  Edit2,
   ShieldCheck,
+  Briefcase,
   UserCircle2,
   AlertCircle,
   MapPin,
@@ -25,13 +33,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 const FleetMaintenance = () => {
   const [fleet, setFleet] = useState([]);
   const [team, setTeam] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('vehicles'); // 'vehicles' or 'team'
+  const [activeTab, setActiveTab] = useState('vehicles'); // 'vehicles', 'team', or 'supervisors'
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
+  const [editingSupervisor, setEditingSupervisor] = useState(null);
 
   // Form States
   const [newVehicle, setNewVehicle] = useState({ id: '', type: 'Refuse Truck', status: 'In Service', health: 100 });
-  const [newMember, setNewMember] = useState({ firstName: '', lastName: '', position: 'Driver', department: 'Public Health', vehicleId: '' });
+  const [newMember, setNewMember] = useState({ firstName: '', lastName: '', position: 'Driver', department: 'Public Health', vehicleId: '', phone: '' });
+  const [newSupervisor, setNewSupervisor] = useState({ name: '', department: '', phone: '' });
 
   useEffect(() => {
     const unsubFleet = subscribeToFleet((data) => {
@@ -41,9 +54,13 @@ const FleetMaintenance = () => {
     const unsubTeam = subscribeToTeam((data) => {
       setTeam(data);
     });
+    const unsubSupervisors = subscribeToSupervisors((data) => {
+      setSupervisors(data);
+    });
     return () => {
       unsubFleet();
       unsubTeam();
+      unsubSupervisors();
     };
   }, []);
 
@@ -58,7 +75,35 @@ const FleetMaintenance = () => {
     e.preventDefault();
     await addTeamMember(newMember);
     setShowAddModal(false);
-    setNewMember({ firstName: '', lastName: '', position: 'Driver', department: 'Public Health', vehicleId: '' });
+    setNewMember({ firstName: '', lastName: '', position: 'Driver', department: 'Public Health', vehicleId: '', phone: '' });
+  };
+
+  const handleUpdateVehicle = async (e) => {
+    e.preventDefault();
+    const { id, ...updates } = editingVehicle;
+    await updateVehicle(id, updates);
+    setEditingVehicle(null);
+  };
+
+  const handleUpdateMember = async (e) => {
+    e.preventDefault();
+    const { id, ...updates } = editingMember;
+    await updateTeamMember(id, updates);
+    setEditingMember(null);
+  };
+
+  const handleAddSupervisor = async (e) => {
+    e.preventDefault();
+    await addSupervisor(newSupervisor);
+    setShowAddModal(false);
+    setNewSupervisor({ name: '', department: '', phone: '' });
+  };
+
+  const handleUpdateSupervisor = async (e) => {
+    e.preventDefault();
+    const { id, ...updates } = editingSupervisor;
+    await updateSupervisor(id, updates);
+    setEditingSupervisor(null);
   };
 
   return (
@@ -86,13 +131,20 @@ const FleetMaintenance = () => {
               <Users className="w-3.5 h-3.5" />
               Field Teams
             </button>
+            <button 
+              onClick={() => setActiveTab('supervisors')}
+              className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${activeTab === 'supervisors' ? 'bg-surface-container-lowest shadow-sm text-primary' : 'text-on-surface-variant/40'}`}
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              Supervisors
+            </button>
           </div>
           <button 
             onClick={() => setShowAddModal(true)}
             className="w-full sm:w-auto px-4 py-2 bg-primary text-on-primary font-black rounded-xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.15em] border border-primary/20"
           >
             <Plus className="w-3.5 h-3.5" />
-            New {activeTab === 'vehicles' ? 'Unit' : 'Personnel'}
+            New {activeTab === 'vehicles' ? 'Unit' : activeTab === 'team' ? 'Personnel' : 'Supervisor'}
           </button>
         </div>
       </div>
@@ -146,13 +198,21 @@ const FleetMaintenance = () => {
                               <span className="text-[9px] font-black opacity-30">{vehicle.health}%</span>
                            </div>
                         </td>
-                        <td className="px-5 py-3 text-right">
-                          <button 
-                            onClick={() => deleteVehicle(vehicle.id)}
-                            className="p-1.5 hover:bg-tertiary/10 text-on-surface-variant/30 hover:text-tertiary rounded-lg transition-all active:scale-90"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                         <td className="px-5 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => setEditingVehicle(vehicle)}
+                              className="p-1.5 hover:bg-primary/10 text-on-surface-variant/30 hover:text-primary rounded-lg transition-all active:scale-90"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => deleteVehicle(vehicle.id)}
+                              className="p-1.5 hover:bg-tertiary/10 text-on-surface-variant/30 hover:text-tertiary rounded-lg transition-all active:scale-90"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -160,7 +220,7 @@ const FleetMaintenance = () => {
                 </table>
               </div>
             </motion.div>
-          ) : (
+          ) : activeTab === 'team' ? (
             <motion.div 
               key="team"
               initial={{ opacity: 0, scale: 0.98 }}
@@ -180,12 +240,20 @@ const FleetMaintenance = () => {
                         <p className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-tighter truncate">{member.position}</p>
                       </div>
                     </div>
-                    <button 
-                       onClick={() => deleteTeamMember(member.id)}
-                       className="p-1 opacity-0 group-hover:opacity-100 bg-tertiary/5 text-tertiary hover:bg-tertiary/10 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                     <div className="flex items-center gap-1.5">
+                      <button 
+                         onClick={() => setEditingMember(member)}
+                         className="p-1 opacity-0 group-hover:opacity-100 bg-primary/5 text-primary hover:bg-primary/10 rounded-lg transition-all underline decoration-primary/30"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button 
+                         onClick={() => deleteTeamMember(member.id)}
+                         className="p-1 opacity-0 group-hover:opacity-100 bg-tertiary/5 text-tertiary hover:bg-tertiary/10 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="mt-4 flex flex-col gap-2 pt-3 border-t border-outline-variant/5">
@@ -193,12 +261,69 @@ const FleetMaintenance = () => {
                        <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Department</span>
                        <span className="text-[9px] font-black text-on-surface/60">{member.department}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                       <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Assigned Unit</span>
+                     <div className="flex items-center justify-between">
+                       <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Assigned Vehicle</span>
                        <span className={`text-[9px] font-black ${member.vehicleId ? 'text-primary' : 'text-on-surface-variant/20 italic'}`}>
-                         {member.vehicleId || 'Unassigned'}
+                         {member.vehicleId || '--'}
                        </span>
                     </div>
+                    {member.phone && (
+                      <div className="flex items-center justify-between">
+                         <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Contact</span>
+                         <span className="text-[9px] font-bold text-on-surface/60">{member.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="supervisors"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+            >
+              {supervisors.map((sup) => (
+                <div key={sup.id} className="bg-surface-container-lowest p-3.5 rounded-2xl border border-outline-variant/10 shadow-sm relative group overflow-hidden hover:border-primary/20 transition-all">
+                  <div className="flex items-start justify-between relative z-10">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Briefcase className="w-5 h-5" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <h4 className="font-headline font-black text-xs leading-tight group-hover:text-primary transition-colors truncate">{sup.name}</h4>
+                        <p className="text-[9px] font-bold text-on-surface-variant/40 uppercase tracking-tighter truncate">Site Supervisor</p>
+                      </div>
+                    </div>
+                     <div className="flex items-center gap-1.5">
+                      <button 
+                         onClick={() => setEditingSupervisor(sup)}
+                         className="p-1 opacity-0 group-hover:opacity-100 bg-primary/5 text-primary hover:bg-primary/10 rounded-lg transition-all underline decoration-primary/30"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button 
+                         onClick={() => deleteSupervisor(sup.id)}
+                         className="p-1 opacity-0 group-hover:opacity-100 bg-tertiary/5 text-tertiary hover:bg-tertiary/10 rounded-lg transition-all"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex flex-col gap-2 pt-3 border-t border-outline-variant/5">
+                    <div className="flex items-center justify-between">
+                       <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Department</span>
+                       <span className="text-[9px] font-black text-on-surface/60">{sup.department}</span>
+                    </div>
+                    {sup.phone && (
+                      <div className="flex items-center justify-between">
+                         <span className="text-[8px] font-black text-on-surface-variant/30 uppercase tracking-widest">Contact</span>
+                         <span className="text-[9px] font-bold text-on-surface/60">{sup.phone}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -206,6 +331,117 @@ const FleetMaintenance = () => {
           )}
         </AnimatePresence>
       )}
+
+      {/* Edit Vehicle Modal */}
+      <AnimatePresence>
+        {editingVehicle && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingVehicle(null)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.98, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 10 }} className="bg-surface-container-lowest w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-outline-variant/10">
+              <form onSubmit={handleUpdateVehicle} className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2.5 px-1">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><Truck className="w-4 h-4" /></div>
+                    <h3 className="text-base font-headline font-black">Edit Vehicle {editingVehicle.id}</h3>
+                  </div>
+                  <button type="button" onClick={() => setEditingVehicle(null)} className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant/40 transition-colors"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Type</label>
+                    <select value={editingVehicle.type} onChange={e => setEditingVehicle({...editingVehicle, type: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none">
+                      <option>Refuse Truck</option>
+                      <option>Compactor</option>
+                      <option>Support Van</option>
+                      <option>Waste Tanker</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Status</label>
+                    <select value={editingVehicle.status} onChange={e => setEditingVehicle({...editingVehicle, status: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none">
+                      <option>In Service</option>
+                      <option>Maintenance</option>
+                      <option>Out of Service</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                     <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Efficiency / Health (%)</label>
+                     <input type="number" min="0" max="100" value={editingVehicle.health} onChange={e => setEditingVehicle({...editingVehicle, health: parseInt(e.target.value)})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none" />
+                  </div>
+                  
+                  <div className="pt-4 border-t border-outline-variant/10">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1 block mb-2">Assigned Personnel</label>
+                    <div className="space-y-2">
+                      {team.filter(m => m.vehicleId === editingVehicle.id).map(member => (
+                        <div key={member.id} className="flex items-center justify-between p-2 bg-surface-container rounded-lg border border-outline-variant/5">
+                          <span className="text-[10px] font-bold">{member.firstName} {member.lastName}</span>
+                          <button type="button" onClick={() => updateTeamMember(member.id, { vehicleId: '' })} className="text-[9px] font-black text-tertiary uppercase tracking-tighter hover:underline">Unassign</button>
+                        </div>
+                      ))}
+                      {team.filter(m => m.vehicleId === editingVehicle.id).length === 0 && (
+                        <p className="text-[10px] text-on-surface-variant/40 italic">No personnel assigned</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" className="w-full mt-8 py-3 bg-primary text-on-primary font-black rounded-xl shadow-lg text-[11px] uppercase tracking-widest">Update Infrastructure</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Personnel Modal */}
+      <AnimatePresence>
+        {editingMember && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingMember(null)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.98, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 10 }} className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-outline-variant/10">
+              <form onSubmit={handleUpdateMember} className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2.5 px-1">
+                    <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary"><Users className="w-4 h-4" /></div>
+                    <h3 className="text-base font-headline font-black">Edit Personnel</h3>
+                  </div>
+                  <button type="button" onClick={() => setEditingMember(null)} className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant/40 transition-colors"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">First Name</label>
+                      <input required value={editingMember.firstName} onChange={e => setEditingMember({...editingMember, firstName: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Last Name</label>
+                      <input required value={editingMember.lastName} onChange={e => setEditingMember({...editingMember, lastName: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Functional Position</label>
+                    <input required value={editingMember.position} onChange={e => setEditingMember({...editingMember, position: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Department</label>
+                    <input required value={editingMember.department} onChange={e => setEditingMember({...editingMember, department: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Contact Phone</label>
+                    <input value={editingMember.phone || ''} onChange={e => setEditingMember({...editingMember, phone: e.target.value})} placeholder="+263 7..." className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Assigned Vehicle</label>
+                    <select value={editingMember.vehicleId} onChange={e => setEditingMember({...editingMember, vehicleId: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none">
+                      <option value="">Unassigned / Global</option>
+                      {fleet.map(v => <option key={v.id} value={v.id}>{v.id} ({v.type})</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button type="submit" className="w-full mt-8 py-3 bg-secondary text-on-secondary font-black rounded-xl shadow-lg text-[11px] uppercase tracking-widest">Update Personnel Data</button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Add Modal */}
       <AnimatePresence>
@@ -224,14 +460,14 @@ const FleetMaintenance = () => {
               exit={{ scale: 0.98, opacity: 0, y: 10 }}
               className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-outline-variant/10"
             >
-              <form onSubmit={activeTab === 'vehicles' ? handleAddVehicle : handleAddMember} className="p-6">
+              <form onSubmit={activeTab === 'vehicles' ? handleAddVehicle : activeTab === 'team' ? handleAddMember : handleAddSupervisor} className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2.5 px-1">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                       {activeTab === 'vehicles' ? <Truck className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                       {activeTab === 'vehicles' ? <Truck className="w-4 h-4" /> : activeTab === 'team' ? <Users className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
                     </div>
                     <h3 className="text-base font-headline font-black">
-                      {activeTab === 'vehicles' ? 'Add Unit' : 'Add Personnel'}
+                      {activeTab === 'vehicles' ? 'Add Unit' : activeTab === 'team' ? 'Add Personnel' : 'Add Supervisor'}
                     </h3>
                   </div>
                   <button type="button" onClick={() => setShowAddModal(false)} className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant/40 transition-colors">
@@ -266,7 +502,7 @@ const FleetMaintenance = () => {
                         </select>
                       </div>
                     </>
-                  ) : (
+                  ) : activeTab === 'team' ? (
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
@@ -302,7 +538,7 @@ const FleetMaintenance = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Operational Assignee (Truck)</label>
-                        <select 
+                         <select 
                           value={newMember.vehicleId}
                           onChange={e => setNewMember({...newMember, vehicleId: e.target.value})}
                           className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
@@ -312,6 +548,47 @@ const FleetMaintenance = () => {
                             <option key={v.id} value={v.id}>{v.id} ({v.type})</option>
                           ))}
                         </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Contact Phone</label>
+                        <input 
+                          value={newMember.phone || ''}
+                          onChange={e => setNewMember({...newMember, phone: e.target.value})}
+                          placeholder="+263 7..."
+                          className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Full Name</label>
+                        <input 
+                          required
+                          value={newSupervisor.name}
+                          onChange={e => setNewSupervisor({...newSupervisor, name: e.target.value})}
+                          placeholder="Supervisor Name"
+                          className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Department</label>
+                        <input 
+                          required
+                          value={newSupervisor.department}
+                          onChange={e => setNewSupervisor({...newSupervisor, department: e.target.value})}
+                          placeholder="e.g. Waste Management"
+                          className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Contact Phone</label>
+                        <input 
+                          value={newSupervisor.phone}
+                          onChange={e => setNewSupervisor({...newSupervisor, phone: e.target.value})}
+                          placeholder="+263 7..."
+                          className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold"
+                        />
                       </div>
                     </>
                   )}
@@ -323,6 +600,41 @@ const FleetMaintenance = () => {
                 >
                   Verify & Register
                 </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Supervisor Modal */}
+      <AnimatePresence>
+        {editingSupervisor && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingSupervisor(null)} className="absolute inset-0 bg-on-surface/40 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.98, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.98, opacity: 0, y: 10 }} className="bg-surface-container-lowest w-full max-w-sm rounded-2xl shadow-2xl relative z-10 overflow-hidden border border-outline-variant/10">
+              <form onSubmit={handleUpdateSupervisor} className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2.5 px-1">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><Briefcase className="w-4 h-4" /></div>
+                    <h3 className="text-base font-headline font-black">Edit Supervisor</h3>
+                  </div>
+                  <button type="button" onClick={() => setEditingSupervisor(null)} className="p-1.5 hover:bg-surface-container rounded-lg text-on-surface-variant/40 transition-colors"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Full Name</label>
+                    <input required value={editingSupervisor.name} onChange={e => setEditingSupervisor({...editingSupervisor, name: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Department</label>
+                    <input required value={editingSupervisor.department} onChange={e => setEditingSupervisor({...editingSupervisor, department: e.target.value})} className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none transition-all" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-on-surface-variant/40 ml-1">Contact Phone</label>
+                    <input value={editingSupervisor.phone || ''} onChange={e => setEditingSupervisor({...editingSupervisor, phone: e.target.value})} placeholder="+263 7..." className="w-full px-4 py-2.5 bg-surface-container rounded-xl border border-outline-variant/10 text-xs font-bold outline-none" />
+                  </div>
+                </div>
+                <button type="submit" className="w-full mt-8 py-3 bg-primary text-on-primary font-black rounded-xl shadow-lg text-[11px] uppercase tracking-widest">Update Supervisor Data</button>
               </form>
             </motion.div>
           </div>

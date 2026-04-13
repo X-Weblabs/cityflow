@@ -16,6 +16,8 @@ import FleetMaintenance from './views/dashboard/FleetMaintenance';
 import ServiceReports from './views/dashboard/ServiceReports';
 import BinMonitoring from './views/dashboard/BinMonitoring';
 import RecyclingAnalytics from './views/dashboard/RecyclingAnalytics';
+import LandfillManagement from './views/dashboard/LandfillManagement';
+import OperatorPortal from './views/OperatorPortal';
 
 function App() {
   const [formData, setFormData] = useState({
@@ -74,6 +76,9 @@ function App() {
           element={<ReportSuccess resetForm={resetForm} />} 
         />
 
+        {/* Operator Portal */}
+        <Route path="/operator" element={<OperatorPortal />} />
+
         {/* City Council Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardOverview />} />
@@ -82,6 +87,7 @@ function App() {
           <Route path="reports" element={<ServiceReports />} />
           <Route path="bins" element={<BinMonitoring />} />
           <Route path="analytics" element={<RecyclingAnalytics />} />
+          <Route path="landfill" element={<LandfillManagement />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

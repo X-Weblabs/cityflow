@@ -10,7 +10,8 @@ import {
   Bell,
   Search,
   LogOut,
-  Settings
+  Settings,
+  Warehouse
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -19,8 +20,9 @@ const cn = (...inputs) => twMerge(clsx(inputs));
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/dashboard', end: true },
-  { icon: Ticket, label: 'Tickets', path: '/dashboard/reports' }, // Renamed from Service Reports
+  { icon: Ticket, label: 'Tickets', path: '/dashboard/reports' },
   { icon: Truck, label: 'Fleet', path: '/dashboard/fleet' },
+  { icon: Warehouse, label: 'Landfill', path: '/dashboard/landfill' },
   { icon: BarChart3, label: 'Analytics', path: '/dashboard/analytics' },
 ];
 
