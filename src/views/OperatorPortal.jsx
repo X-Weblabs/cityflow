@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Truck, 
-  AlertTriangle, 
-  CheckCircle, 
-  MapPin, 
-  Activity, 
-  ChevronRight,
-  Plus,
-  Weight,
-  History,
-  Navigation,
-  Warehouse,
-  X
+  Warehouse, 
+  Dog, 
+  ClipboardCheck, 
+  ListTodo, 
+  Search,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
@@ -21,30 +16,58 @@ import {
   subscribeToBWMTDeliveries,
   addLandfillEntry,
   addBWMTDelivery,
-  addVehicleIssue,
   subscribeToLandfillSites,
-  subscribeToSupervisors
+  subscribeToSupervisors,
+  addDogNotice,
+  subscribeToDogNotices,
+  addInspection,
+  subscribeToInspections,
+  subscribeToTasksFollowUp,
+  addComplaintInvestigation,
+  subscribeToComplaintInvestigations,
+  addSupervisorComplaint,
+  subscribeToSupervisorComplaints,
+  updateRecordStatus
 } from '../services/db';
-import Modal from '../components/Modal';
-import MultiSelect from '../components/MultiSelect';
+import OperatorSidebar from '../components/OperatorSidebar';
+import OperatorTopNav from '../components/OperatorTopNav';
+
+// Extracted Modules
+import { LandfillModule } from '../components/operator/LandfillModule';
+import { DogNoticeModule } from '../components/operator/DogNoticeModule';
+import { InspectionModule } from '../components/operator/InspectionModule';
+import { TaskFollowUpModule, InvestigationModule } from '../components/operator/TaskModules';
+import { SupervisorComplaintModule } from '../components/operator/SupervisorComplaintModule';
 
 const OperatorPortal = () => {
   const [fleet, setFleet] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [activeSection, setActiveSection] = useState('landfill');
+  const [activeLandfillTab, setActiveLandfillTab] = useState('recycling');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Data States
   const [entries, setEntries] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [sites, setSites] = useState([]);
   const [supervisors, setSupervisors] = useState([]);
-  
-  const [showEntryModal, setShowEntryModal] = useState(false);
-  const [showBWMTModal, setShowBWMTModal] = useState(false);
-  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [dogNotices, setDogNotices] = useState([]);
+  const [inspections, setInspections] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [investigations, setInvestigations] = useState([]);
+  const [supervisorComplaints, setSupervisorComplaints] = useState([]);
+
+  // Task Search State
+  const [taskSearchQuery, setTaskSearchQuery] = useState('');
+  const [taskCategory, setTaskCategory] = useState('landfill');
+  const [selectedTaskRecord, setSelectedTaskRecord] = useState(null);
 
   // Form States
-  const [entryForm, setEntryForm] = useState({
+  const [recyclingForm, setRecyclingForm] = useState({
     date: format(new Date(), 'yyyy-MM-dd'),
     name: '',
     regNumber: '',
+    registrationNumber: '',
     tonnage: '',
     wasteTypes: [],
     destination: '',
@@ -55,13 +78,56 @@ const OperatorPortal = () => {
     date: format(new Date(), 'yyyy-MM-dd'),
     month: format(new Date(), 'MMMM'),
     tonnage: '',
-    wasteTypes: []
+    wasteTypes: [],
+    supervisor: ''
   });
 
-  const [issueForm, setIssueForm] = useState({
-    type: 'Mechanical',
-    description: '',
-    severity: 'Medium'
+  const [dogForm, setDogForm] = useState({
+    ownerName: '',
+    address: '',
+    dogDescription: '',
+    noticeType: 'Unlicensed',
+    actionTaken: '',
+    date: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  const [inspectionForm, setInspectionForm] = useState({
+    facilityName: '',
+    location: '',
+    inspectionType: 'Routine',
+    condition: '3',
+    issues: '',
+    inspectorName: 'John Smith'
+  });
+
+  const [complaintForm, setComplaintForm] = useState({
+    complainantName: '',
+    category: 'Illegal Dumping',
+    location: '',
+    findings: '',
+    actionTaken: '',
+    date: format(new Date(), 'yyyy-MM-dd')
+  });
+
+  const [supComplaintForm, setSupComplaintForm] = useState({
+    dateReceived: format(new Date(), 'yyyy-MM-dd'),
+    complainantName: '',
+    complainantDetails: '',
+    complaintType: 'Animal Complaint',
+    natureOfComplaint: '',
+    accusedDetails: '',
+    supervisorName: '',
+    dateActioned: '',
+    actionTaken: '',
+    intimationGiven: 'No',
+    intimationNumber: '',
+    dogNoticeGiven: 'No',
+    dogNoticeNumber: '',
+    ticketGiven: 'No',
+    ticketNumber: '',
+    tfPromptDate: '',
+    wasteType: '',
+    wasteVolume: ''
   });
 
   useEffect(() => {
@@ -70,98 +136,91 @@ const OperatorPortal = () => {
     const unsubDeliveries = subscribeToBWMTDeliveries(setDeliveries);
     const unsubSites = subscribeToLandfillSites(setSites);
     const unsubSupervisors = subscribeToSupervisors(setSupervisors);
+    const unsubDogs = subscribeToDogNotices(setDogNotices);
+    const unsubInspections = subscribeToInspections(setInspections);
+    const unsubTasks = subscribeToTasksFollowUp(setTasks);
+    const unsubInvestigations = subscribeToComplaintInvestigations(setInvestigations);
+    const unsubSupComplaints = subscribeToSupervisorComplaints(setSupervisorComplaints);
     
-    // Auto-select vehicle if stored in localStorage
     const savedVehicle = localStorage.getItem('operatorVehicle');
-    if (savedVehicle) {
-      setSelectedVehicle(savedVehicle);
-    }
+    if (savedVehicle) setSelectedVehicle(savedVehicle);
 
     return () => {
-      unsubFleet();
-      unsubEntries();
-      unsubDeliveries();
-      unsubSites();
-      unsubSupervisors();
+      unsubFleet(); unsubEntries(); unsubDeliveries(); unsubSites(); 
+      unsubSupervisors(); unsubDogs(); unsubInspections(); 
+      unsubTasks(); unsubInvestigations(); unsubSupComplaints();
     };
   }, []);
 
   useEffect(() => {
     if (selectedVehicle) {
       localStorage.setItem('operatorVehicle', selectedVehicle);
-      setEntryForm(prev => ({ ...prev, regNumber: selectedVehicle }));
+      setRecyclingForm(prev => ({ ...prev, regNumber: selectedVehicle }));
     }
   }, [selectedVehicle]);
 
-  const handleEntrySubmit = async (e) => {
+  const handleSubmit = async (e, type) => {
     e.preventDefault();
-    await addLandfillEntry({
-      ...entryForm,
-      wasteTypes: entryForm.wasteTypes.map(t => t.text)
-    });
-    setShowEntryModal(false);
-    setEntryForm({
-      date: format(new Date(), 'yyyy-MM-dd'),
-      name: '',
-      regNumber: selectedVehicle || '',
-      tonnage: '',
-      wasteTypes: [],
-      destination: '',
-      supervisor: ''
-    });
+    try {
+      switch(type) {
+        case 'recycling':
+          await addLandfillEntry({ ...recyclingForm, wasteTypes: recyclingForm.wasteTypes.map(t => t.text) });
+          setRecyclingForm({ ...recyclingForm, name: '', registrationNumber: '', tonnage: '', wasteTypes: [], destination: '', supervisor: '' });
+          break;
+        case 'bwmt':
+          await addBWMTDelivery({ ...bwmtForm, wasteTypes: bwmtForm.wasteTypes.map(t => t.text) });
+          setBwmtForm({ ...bwmtForm, tonnage: '', wasteTypes: [], supervisor: '' });
+          break;
+        case 'dog':
+          await addDogNotice(dogForm);
+          setDogForm({ ownerName: '', address: '', dogDescription: '', noticeType: 'Unlicensed', actionTaken: '', date: format(new Date(), 'yyyy-MM-dd') });
+          break;
+        case 'inspection':
+          await addInspection(inspectionForm);
+          setInspectionForm({ facilityName: '', location: '', inspectionType: 'Routine', condition: '3', issues: '', inspectorName: 'John Smith' });
+          break;
+        case 'complaint':
+          await addComplaintInvestigation(complaintForm);
+          setComplaintForm({ complainantName: '', category: 'Illegal Dumping', location: '', findings: '', actionTaken: '', date: format(new Date(), 'yyyy-MM-dd') });
+          break;
+        case 'sup_complaint':
+          await addSupervisorComplaint(supComplaintForm);
+          setSupComplaintForm({
+            dateReceived: format(new Date(), 'yyyy-MM-dd'),
+            complainantName: '', complainantDetails: '', complaintType: 'Animal Complaint',
+            natureOfComplaint: '', accusedDetails: '', supervisorName: '', dateActioned: '',
+            actionTaken: '', intimationGiven: 'No', intimationNumber: '', dogNoticeGiven: 'No',
+            dogNoticeNumber: '', ticketGiven: 'No', ticketNumber: '', tfPromptDate: '', wasteType: '', wasteVolume: ''
+          });
+          break;
+      }
+      alert(`${type.split('_').join(' ')} record submitted successfully!`);
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting report.');
+    }
   };
 
-  const handleBWMTSubmit = async (e) => {
-    e.preventDefault();
-    await addBWMTDelivery({
-      ...bwmtForm,
-      wasteTypes: bwmtForm.wasteTypes.map(t => t.text)
-    });
-    setShowBWMTModal(false);
-    setBwmtForm({
-      date: format(new Date(), 'yyyy-MM-dd'),
-      month: format(new Date(), 'MMMM'),
-      tonnage: '',
-      wasteTypes: []
-    });
+  const handleResolve = async (collectionName, id) => {
+    if (window.confirm('Mark this record as resolved?')) {
+      await updateRecordStatus(collectionName, id, 'Resolved');
+      setSelectedTaskRecord(null);
+      alert('Record updated successfully.');
+    }
   };
-
-  const handleIssueSubmit = async (e) => {
-    e.preventDefault();
-    await addVehicleIssue({
-      ...issueForm,
-      vehicleId: selectedVehicle,
-      status: 'Open',
-      reportedAt: format(new Date(), 'yyyy-MM-dd HH:mm')
-    });
-    setShowIssueModal(false);
-    setIssueForm({ type: 'Mechanical', description: '', severity: 'Medium' });
-  };
-
-  const myEntriesToday = entries.filter(e => e.regNumber === selectedVehicle && e.date === format(new Date(), 'yyyy-MM-dd'));
-  const dailyTotalTonnage = myEntriesToday.reduce((acc, curr) => acc + parseFloat(curr.tonnage || 0), 0);
 
   const wasteOptionsEntry = [
-    { text: 'Glass (Aluminium)', value: 'glass' },
-    { text: 'Pet/Plastic bottles', value: 'pet' },
-    { text: 'Clear plastic', value: 'clear_plastic' },
-    { text: 'Cardboard', value: 'cardboard' },
-    { text: 'Rubber', value: 'rubber' },
-    { text: 'Sack', value: 'sack' },
-    { text: 'Metals', value: 'metals' }
+    { text: 'Glass (Aluminium)', value: 'glass' }, { text: 'Pet/Plastic bottles', value: 'pet' },
+    { text: 'Clear plastic', value: 'clear_plastic' }, { text: 'Cardboard', value: 'cardboard' },
+    { text: 'Rubber', value: 'rubber' }, { text: 'Sack', value: 'sack' }, { text: 'Metals', value: 'metals' }
   ];
 
   const wasteOptionsBWMT = [
-    { text: 'Food', value: 'food' },
-    { text: 'Garden', value: 'garden' },
-    { text: 'Paper', value: 'paper' },
-    { text: 'Textile', value: 'textile' },
-    { text: 'Nappies', value: 'nappies' },
-    { text: 'Metals', value: 'metals_bwmt' },
-    { text: 'Rubber & Leather', value: 'rubber_leather' },
-    { text: 'Glass', value: 'glass_bwmt' },
-    { text: 'Domestic', value: 'domestic' },
-    { text: 'Organic', value: 'organic' },
+    { text: 'Food', value: 'food' }, { text: 'Garden', value: 'garden' },
+    { text: 'Paper', value: 'paper' }, { text: 'Textile', value: 'textile' },
+    { text: 'Nappies', value: 'nappies' }, { text: 'Metals', value: 'metals_bwmt' },
+    { text: 'Rubber & Leather', value: 'rubber_leather' }, { text: 'Glass', value: 'glass_bwmt' },
+    { text: 'Domestic', value: 'domestic' }, { text: 'Organic', value: 'organic' },
     { text: 'Industrial SWM', value: 'industrial' }
   ];
 
@@ -170,31 +229,22 @@ const OperatorPortal = () => {
   if (!selectedVehicle) {
     return (
       <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-2xl p-8 text-center"
-        >
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mx-auto mb-6">
-            <Truck className="w-8 h-8" />
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-2xl p-6 text-center text-on-surface">
+          <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto mb-5">
+            <Truck className="w-7 h-7" />
           </div>
-          <h1 className="text-xl font-headline font-black mb-2">Vehicle Check-in</h1>
-          <p className="text-xs font-bold text-on-surface-variant/40 uppercase tracking-widest mb-8">Select your assigned unit to start</p>
-          
-          <div className="space-y-3">
+          <h1 className="text-lg font-headline font-black mb-1">Vehicle Check-in</h1>
+          <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest mb-6">Select assigned unit to start</p>
+          <div className="space-y-2">
             {fleet.map(v => (
-              <button 
-                key={v.id}
-                onClick={() => setSelectedVehicle(v.id)}
-                className="w-full flex items-center justify-between p-4 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/5 transition-all group"
-              >
-                <div className="flex items-center gap-3">
+              <button key={v.id} onClick={() => setSelectedVehicle(v.id)} className="w-full flex items-center justify-between p-3 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/5 transition-all group">
+                <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-surface-container-lowest flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors">
                     <Truck className="w-4 h-4" />
                   </div>
-                  <span className="font-mono font-black text-sm">{v.id}</span>
+                  <span className="font-mono font-black text-xs">{v.id}</span>
                 </div>
-                <ChevronRight className="w-4 h-4 opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                <ChevronRight className="w-3.5 h-3.5 opacity-20 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
               </button>
             ))}
           </div>
@@ -203,195 +253,159 @@ const OperatorPortal = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-surface p-4 md:p-6 lg:p-10">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="px-2 py-0.5 rounded bg-primary text-on-primary font-mono font-black text-[10px]">{selectedVehicle}</span>
-              <button onClick={() => setSelectedVehicle(null)} className="text-[10px] font-black uppercase text-primary/40 hover:text-primary transition-colors tracking-widest">Switch Unit</button>
-            </div>
-            <h1 className="text-2xl font-headline font-black">Field Operator</h1>
-          </div>
-          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-on-secondary font-black">JS</div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-sm">
-            <Activity className="w-5 h-5 text-primary mb-3" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-1">Activity</p>
-            <h3 className="text-xl font-headline font-black">{myEntriesToday.length} <span className="text-[10px] text-on-surface-variant font-bold opacity-30 tracking-tight">STREAK</span></h3>
-          </div>
-          <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/10 shadow-sm">
-            <Weight className="w-5 h-5 text-secondary mb-3" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40 mb-1">Tonnage</p>
-            <h3 className="text-xl font-headline font-black">{dailyTotalTonnage.toFixed(1)}t</h3>
-          </div>
-          <div className="col-span-2 bg-primary text-on-primary p-5 rounded-3xl shadow-lg shadow-primary/20 relative overflow-hidden group">
-            <div className="relative z-10">
-               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-1">Today's Progress</p>
-               <h3 className="text-2xl font-headline font-black mb-3">{Math.min(100, (myEntriesToday.length / 10) * 100).toFixed(0)}%</h3>
-               <div className="w-full h-2 bg-on-primary/20 rounded-full overflow-hidden">
-                 <motion.div 
-                   initial={{ width: 0 }}
-                   animate={{ width: `${Math.min(100, (myEntriesToday.length / 10) * 100)}%` }}
-                   className="h-full bg-on-primary" 
-                 />
-               </div>
-            </div>
-            <Activity className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10 group-hover:scale-110 transition-transform" />
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button 
-            onClick={() => setShowEntryModal(true)}
-            className="flex flex-col items-center justify-center gap-3 p-8 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-primary/50 group transition-all"
-          >
-            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-               <Plus className="w-6 h-6" />
-            </div>
-            <span className="font-black text-[11px] uppercase tracking-widest">New Refuse Entry</span>
-          </button>
-          <button 
-            onClick={() => setShowBWMTModal(true)}
-            className="flex flex-col items-center justify-center gap-3 p-8 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-secondary/50 group transition-all"
-          >
-            <div className="w-12 h-12 bg-secondary/10 rounded-2xl flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
-               <Warehouse className="w-6 h-6" />
-            </div>
-            <span className="font-black text-[11px] uppercase tracking-widest">BWMT Delivery</span>
-          </button>
-          <button 
-            onClick={() => setShowIssueModal(true)}
-            className="flex flex-col items-center justify-center gap-3 p-8 bg-surface-container-lowest rounded-3xl border border-outline-variant/10 hover:border-tertiary/50 group transition-all"
-          >
-            <div className="w-12 h-12 bg-tertiary/10 rounded-2xl flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
-               <AlertTriangle className="w-6 h-6" />
-            </div>
-            <span className="font-black text-[11px] uppercase tracking-widest">Report Vehicle Issue</span>
-          </button>
-        </div>
-
-        {/* Activity Feed */}
-        <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-sm overflow-hidden">
-           <div className="p-6 border-b border-outline-variant/5 flex items-center justify-between">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Recent Site Activity</h4>
-              <History className="w-4 h-4 opacity-20" />
-           </div>
-           <div className="divide-y divide-outline-variant/5">
-              {myEntriesToday.map((entry, i) => (
-                <div key={i} className="p-4 flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-surface-container flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-on-surface-variant/40" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-bold">{entry.destination}</p>
-                        <p className="text-[9px] font-black uppercase tracking-tighter opacity-30">{entry.tonnage}t • {entry.date}</p>
-                      </div>
-                   </div>
-                   <CheckCircle className="w-5 h-5 text-secondary opacity-20" />
-                </div>
-              ))}
-              {myEntriesToday.length === 0 && (
-                <div className="p-12 text-center">
-                   <Navigation className="w-12 h-12 bg-surface-container p-3 rounded-2xl text-on-surface-variant/20 mx-auto mb-4" />
-                   <p className="text-[11px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Waiting for First Collection</p>
-                </div>
-              )}
-           </div>
-        </div>
+  const SectionTitle = ({ title, subtitle, icon: Icon }) => (
+    <div className="flex items-center gap-3 mb-6">
+      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm shadow-primary/5">
+        <Icon className="w-5 h-5" />
       </div>
+      <div>
+        <h2 className="text-lg font-headline font-black text-on-surface">{title}</h2>
+        <p className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/40">{subtitle}</p>
+      </div>
+    </div>
+  );
 
-      {/* Entry Modal */}
-      <Modal isOpen={showEntryModal} onClose={() => setShowEntryModal(false)} title="New Refuse Submission">
-        <form onSubmit={handleEntrySubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Company / Private Name</label>
-              <input type="text" value={entryForm.name} onChange={(e) => setEntryForm({...entryForm, name: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold" required />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Weight (t)</label>
-              <input type="number" step="0.01" value={entryForm.tonnage} onChange={(e) => setEntryForm({...entryForm, tonnage: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold" required />
-            </div>
-          </div>
-          <MultiSelect label="Type of Waste" options={wasteOptionsEntry} selected={entryForm.wasteTypes} onChange={(selected) => setEntryForm({...entryForm, wasteTypes: selected})} />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Destination</label>
-              <select value={entryForm.destination} onChange={(e) => setEntryForm({...entryForm, destination: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold">
-                <option value="">Select Site</option>
-                {sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Supervisor</label>
-              <select value={entryForm.supervisor} onChange={(e) => setEntryForm({...entryForm, supervisor: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold">
-                <option value="">Select Supervisor</option>
-                {supervisors.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
-            </div>
-          </div>
-          <button type="submit" className="w-full bg-primary text-on-primary py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20">Submit Entry</button>
-        </form>
-      </Modal>
+  const filterRecords = () => {
+    let dataset = [];
+    let collName = '';
+    if (taskCategory === 'landfill') { dataset = entries; collName = 'landfill_entries'; }
+    else if (taskCategory === 'dog') { dataset = dogNotices; collName = 'dog_notices'; }
+    else if (taskCategory === 'inspection') { dataset = inspections; collName = 'inspections'; }
 
-      {/* BWMT Modal */}
-      <Modal isOpen={showBWMTModal} onClose={() => setShowBWMTModal(false)} title="BWMT Delivery Report">
-        <form onSubmit={handleBWMTSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Month</label>
-              <select value={bwmtForm.month} onChange={(e) => setBwmtForm({...bwmtForm, month: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold">
-                {months.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Tonnage</label>
-              <input type="number" step="0.01" value={bwmtForm.tonnage} onChange={(e) => setBwmtForm({...bwmtForm, tonnage: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold" required />
-            </div>
-          </div>
-          <MultiSelect label="Type of Waste" options={wasteOptionsBWMT} selected={bwmtForm.wasteTypes} onChange={(selected) => setBwmtForm({...bwmtForm, wasteTypes: selected})} />
-          <button type="submit" className="w-full bg-secondary text-on-secondary py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-secondary/20">Confirm Delivery</button>
-        </form>
-      </Modal>
+    return dataset
+      .filter(r => {
+        const query = taskSearchQuery.toLowerCase();
+        return (
+          r.id?.toLowerCase().includes(query) || 
+          r.name?.toLowerCase().includes(query) || 
+          r.ownerName?.toLowerCase().includes(query) ||
+          r.facilityName?.toLowerCase().includes(query)
+        );
+      })
+      .map(r => ({ ...r, _coll: collName }));
+  };
 
-      {/* Issue Modal */}
-      <Modal isOpen={showIssueModal} onClose={() => setShowIssueModal(false)} title="Report Vehicle Issue">
-        <form onSubmit={handleIssueSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Issue Type</label>
-              <select value={issueForm.type} onChange={(e) => setIssueForm({...issueForm, type: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold">
-                <option>Mechanical</option>
-                <option>Electrical</option>
-                <option>Flat Tire</option>
-                <option>Hydraulic Leak</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Severity</label>
-              <select value={issueForm.severity} onChange={(e) => setIssueForm({...issueForm, severity: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold">
-                <option>Low</option>
-                <option>Medium</option>
-                <option>Critical</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Description</label>
-            <textarea value={issueForm.description} onChange={(e) => setIssueForm({...issueForm, description: e.target.value})} className="w-full bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[13px] font-bold min-h-[100px]" placeholder="Explain the issue..." required />
-          </div>
-          <button type="submit" className="w-full bg-tertiary text-on-tertiary py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-tertiary/20">Report To Dispatch</button>
-        </form>
-      </Modal>
+  const renderSection = () => {
+    switch(activeSection) {
+      case 'landfill':
+        return (
+          <>
+            <SectionTitle title="Landfill Activities" subtitle="Operations & Waste Flow" icon={Warehouse} />
+            <LandfillModule 
+              activeTab={activeLandfillTab} setActiveTab={setActiveLandfillTab}
+              recyclingForm={recyclingForm} setRecyclingForm={setRecyclingForm}
+              bwmtForm={bwmtForm} setBwmtForm={setBwmtForm}
+              supervisors={supervisors} sites={sites}
+              handleSubmit={handleSubmit}
+              wasteOptionsEntry={wasteOptionsEntry} wasteOptionsBWMT={wasteOptionsBWMT}
+              months={months}
+            />
+          </>
+        );
+      case 'dog':
+        return (
+          <>
+            <SectionTitle title="Dog Notice Management" subtitle="Animal Control & Compliance" icon={Dog} />
+            <DogNoticeModule dogForm={dogForm} setDogForm={setDogForm} handleSubmit={handleSubmit} />
+          </>
+        );
+      case 'inspection':
+        return (
+          <>
+            <SectionTitle title="Public Convenience & Inspection" subtitle="Facility Health & Safety" icon={ClipboardCheck} />
+            <InspectionModule inspectionForm={inspectionForm} setInspectionForm={setInspectionForm} handleSubmit={handleSubmit} />
+          </>
+        );
+      case 'tasks':
+        return (
+          <>
+            <SectionTitle title="Tasks Follow Up" subtitle="Historical Record Resolution" icon={ListTodo} />
+            <TaskFollowUpModule
+              taskCategory={taskCategory} setTaskCategory={setTaskCategory}
+              taskSearchQuery={taskSearchQuery} setTaskSearchQuery={setTaskSearchQuery}
+              filterRecords={filterRecords}
+              selectedTaskRecord={selectedTaskRecord} setSelectedTaskRecord={setSelectedTaskRecord}
+              handleResolve={handleResolve}
+            />
+          </>
+        );
+       case 'supervisor_complaints':
+        return (
+          <>
+            <SectionTitle title="Supervisor Complaints" subtitle="Administration & Public Grievance" icon={ClipboardCheck} />
+            <SupervisorComplaintModule 
+              supComplaintForm={supComplaintForm} setSupComplaintForm={setSupComplaintForm}
+              supervisors={supervisors} handleSubmit={handleSubmit}
+            />
+          </>
+        );
+      case 'complaints':
+        return (
+          <>
+            <SectionTitle title="Complaint Investigations" subtitle="Citizen Grievance Resolution" icon={Search} />
+            <InvestigationModule complaintForm={complaintForm} setComplaintForm={setComplaintForm} handleSubmit={handleSubmit} />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen bg-surface selection:bg-primary/10 selection:text-primary">
+      <OperatorSidebar 
+        activeSection={activeSection} 
+        setActiveSection={setActiveSection} 
+        selectedVehicle={selectedVehicle} 
+      />
+      
+      <div className="flex-1 flex flex-col min-w-0">
+        <OperatorTopNav 
+          toggleMobileSidebar={() => setIsMobileSidebarOpen(true)} 
+          selectedVehicle={selectedVehicle} 
+        />
+        
+        <main className="flex-1 p-4 lg:p-6 max-w-[1200px] w-full mx-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              {renderSection()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+      
+      {/* Mobile Sidebar Overlay */}
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] lg:hidden"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              className="fixed top-0 left-0 bottom-0 w-[260px] bg-surface-container-lowest z-[120] lg:hidden"
+            >
+               <OperatorSidebar 
+                activeSection={activeSection} 
+                setActiveSection={(s) => { setActiveSection(s); setIsMobileSidebarOpen(false); }} 
+                selectedVehicle={selectedVehicle} 
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

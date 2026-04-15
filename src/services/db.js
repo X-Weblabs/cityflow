@@ -242,3 +242,133 @@ export const subscribeToVehicleIssues = (callback) => {
   });
   return unsubscribe;
 };
+// --- Dog Notices ---
+export const addDogNotice = async (noticeData) => {
+  const noticesRef = collection(db, 'dog_notices');
+  await addDoc(noticesRef, {
+    ...noticeData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToDogNotices = (callback) => {
+  const noticesRef = collection(db, 'dog_notices');
+  const q = query(noticesRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const noticesArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(noticesArray);
+  });
+  return unsubscribe;
+};
+
+// --- Public Convenience Inspections ---
+export const addInspection = async (inspectionData) => {
+  const inspectionsRef = collection(db, 'inspections');
+  await addDoc(inspectionsRef, {
+    ...inspectionData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToInspections = (callback) => {
+  const inspectionsRef = collection(db, 'inspections');
+  const q = query(inspectionsRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const inspectionsArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(inspectionsArray);
+  });
+  return unsubscribe;
+};
+
+// --- Task Follow Ups ---
+export const addTaskFollowUp = async (taskData) => {
+  const tasksRef = collection(db, 'task_follow_ups');
+  await addDoc(tasksRef, {
+    ...taskData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToTasksFollowUp = (callback) => {
+  const tasksRef = collection(db, 'task_follow_ups');
+  const q = query(tasksRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const tasksArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(tasksArray);
+  });
+  return unsubscribe;
+};
+
+// --- Complaint Investigations ---
+export const addComplaintInvestigation = async (investigationData) => {
+  const investigationsRef = collection(db, 'complaint_investigations');
+  await addDoc(investigationsRef, {
+    ...investigationData,
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToComplaintInvestigations = (callback) => {
+  const investigationsRef = collection(db, 'complaint_investigations');
+  const q = query(investigationsRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const investigationsArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(investigationsArray);
+  });
+  return unsubscribe;
+};
+// --- Supervisor Complaints ---
+export const addSupervisorComplaint = async (complaintData) => {
+  const complaintsRef = collection(db, 'supervisor_complaints');
+  await addDoc(complaintsRef, {
+    ...complaintData,
+    status: 'Pending',
+    createdAt: serverTimestamp(),
+  });
+};
+
+export const subscribeToSupervisorComplaints = (callback) => {
+  const complaintsRef = collection(db, 'supervisor_complaints');
+  const q = query(complaintsRef, orderBy('createdAt', 'desc'));
+  
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const complaintsArray = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toMillis() || Date.now()
+    }));
+    callback(complaintsArray);
+  });
+  return unsubscribe;
+};
+
+/**
+ * Update the status of any record in any collection
+ */
+export const updateRecordStatus = async (collectionName, recordId, status) => {
+  const docRef = doc(db, collectionName, recordId);
+  await updateDoc(docRef, {
+    status,
+    updatedAt: serverTimestamp()
+  });
+};

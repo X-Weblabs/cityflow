@@ -17,6 +17,12 @@ import ServiceReports from './views/dashboard/ServiceReports';
 import BinMonitoring from './views/dashboard/BinMonitoring';
 import RecyclingAnalytics from './views/dashboard/RecyclingAnalytics';
 import LandfillManagement from './views/dashboard/LandfillManagement';
+import DashboardLandfillActivities from './views/dashboard/DashboardLandfillActivities';
+import DashboardDogNotice from './views/dashboard/DashboardDogNotice';
+import DashboardSupervisorComplaints from './views/dashboard/DashboardSupervisorComplaints';
+import DashboardInvestigations from './views/dashboard/DashboardInvestigations';
+import DashboardTasks from './views/dashboard/DashboardTasks';
+import DashboardInspections from './views/dashboard/DashboardInspections';
 import OperatorPortal from './views/OperatorPortal';
 
 function App() {
@@ -87,7 +93,12 @@ function App() {
           <Route path="reports" element={<ServiceReports />} />
           <Route path="bins" element={<BinMonitoring />} />
           <Route path="analytics" element={<RecyclingAnalytics />} />
-          <Route path="landfill" element={<LandfillManagement />} />
+          <Route path="landfill" element={<DashboardLandfillActivities />} />
+          <Route path="dog-notices" element={<DashboardDogNotice />} />
+          <Route path="supervisor-complaints" element={<DashboardSupervisorComplaints />} />
+          <Route path="investigations" element={<DashboardInvestigations />} />
+          <Route path="tasks" element={<DashboardTasks />} />
+          <Route path="inspections" element={<DashboardInspections />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

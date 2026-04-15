@@ -11,6 +11,9 @@ import {
   Search,
   LogOut,
   Settings,
+  Dog,
+  ClipboardCheck,
+  ListTodo,
   Warehouse
 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -20,9 +23,15 @@ const cn = (...inputs) => twMerge(clsx(inputs));
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Overview', path: '/dashboard', end: true },
-  { icon: Ticket, label: 'Tickets', path: '/dashboard/reports' },
+  { icon: Warehouse, label: 'Landfill Activities', path: '/dashboard/landfill' },
+  { icon: Dog, label: 'Dog Notice', path: '/dashboard/dog-notices' },
+  { icon: ClipboardCheck, label: 'Supervisor Complaints', path: '/dashboard/supervisor-complaints' },
+  // Secondary items
+  { icon: Search, label: 'Investigations', path: '/dashboard/investigations' },
+  { icon: ListTodo, label: 'Tasks Follow up', path: '/dashboard/tasks' },
+  { icon: ClipboardCheck, label: 'Inspections', path: '/dashboard/inspections' },
   { icon: Truck, label: 'Fleet', path: '/dashboard/fleet' },
-  { icon: Warehouse, label: 'Landfill', path: '/dashboard/landfill' },
+  { icon: Ticket, label: 'Tickets', path: '/dashboard/reports' },
   { icon: BarChart3, label: 'Analytics', path: '/dashboard/analytics' },
 ];
 
@@ -50,7 +59,7 @@ const DashboardNavbar = () => {
           <div className="h-6 w-[1px] bg-outline-variant/20 mx-1"></div>
 
           <div className="flex items-center gap-0.5">
-            {navItems.map((item) => (
+            {primaryItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -66,6 +75,44 @@ const DashboardNavbar = () => {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+
+            {/* Desktop More Menu */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowMore(!showMore)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 group",
+                  showMore ? "bg-surface-container text-on-surface" : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
+                )}
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+                <span>More</span>
+              </button>
+
+              {showMore && (
+                <>
+                  <div className="fixed inset-0 z-[110]" onClick={() => setShowMore(false)} />
+                  <div className="absolute top-full left-0 mt-2 bg-surface-container-lowest border border-outline-variant/15 shadow-2xl rounded-2xl p-2 min-w-[220px] z-[120] animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-0.5">
+                      {secondaryItems.map((item) => (
+                        <NavLink
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setShowMore(false)}
+                          className={({ isActive }) => cn(
+                            "flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all font-bold text-[13px]",
+                            isActive ? "bg-primary/10 text-primary" : "text-on-surface-variant hover:bg-surface-container"
+                          )}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
