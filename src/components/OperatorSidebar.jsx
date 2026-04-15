@@ -10,6 +10,10 @@ import {
   Truck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+const cn = (...inputs) => twMerge(clsx(inputs));
 
 const SidebarItem = ({ icon: Icon, label, active, onClick, badge }) => (
   <button
@@ -50,7 +54,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick, badge }) => (
   </button>
 );
 
-const OperatorSidebar = ({ activeSection, setActiveSection, selectedVehicle }) => {
+const OperatorSidebar = ({ activeSection, setActiveSection, selectedVehicle, className }) => {
   const menuItems = [
     { id: 'landfill', label: 'Landfill activities', icon: Warehouse },
     { id: 'dog', label: 'Dog notice', icon: Dog },
@@ -61,7 +65,7 @@ const OperatorSidebar = ({ activeSection, setActiveSection, selectedVehicle }) =
   ];
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 h-screen bg-surface-container-lowest border-r border-outline-variant/10 p-4 sticky top-0">
+    <aside className={cn("flex flex-col w-64 h-screen bg-surface-container-lowest border-r border-outline-variant/10 p-4 sticky top-0", className)}>
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
           <Truck className="w-5 h-5 text-on-primary" />

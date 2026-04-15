@@ -1,85 +1,98 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { LandfillModule } from '../../components/operator/LandfillModule';
-import { 
-  addLandfillEntry, 
-  addBWMTDelivery, 
-  subscribeToLandfillSites, 
-  subscribeToSupervisors 
-} from '../../services/db';
+import { subscribeToLandfillEntries, subscribeToBWMTDeliveries } from '../../services/db';
+import { RecordListViewer } from '../../components/dashboard/RecordListViewer';
+import { RecordDetailModal } from '../../components/dashboard/RecordDetailModal';
 
 const DashboardLandfillActivities = () => {
   const [activeTab, setActiveTab] = useState('recycling');
-  const [sites, setSites] = useState([]);
-  const [supervisors, setSupervisors] = useState([]);
-
-  // Form States
-  const [recyclingForm, setRecyclingForm] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    name: '', registrationNumber: '', tonnage: '', wasteTypes: [], destination: '', supervisor: ''
-  });
-
-  const [bwmtForm, setBwmtForm] = useState({
-    date: format(new Date(), 'yyyy-MM-dd'),
-    month: format(new Date(), 'MMMM'),
-    tonnage: '', wasteTypes: [], supervisor: ''
-  });
+  const [entries, setEntries] = useState([]);
+  const [bwmtDeliveries, setBwmtDeliveries] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
-    const unsubSites = subscribeToLandfillSites(setSites);
-    const unsubSupers = subscribeToSupervisors(setSupervisors);
-    return () => { unsubSites(); unsubSupers(); };
+    const unsubEntries = subscribeToLandfillEntries(setEntries);
+    const unsubBwmt = subscribeToBWMTDeliveries(setBwmtDeliveries);
+    return () => { unsubEntries(); unsubBwmt(); };
   }, []);
 
-  const handleSubmit = async (e, type) => {
-    e.preventDefault();
-    try {
-      if (type === 'recycling') {
-        await addLandfillEntry({ ...recyclingForm, wasteTypes: recyclingForm.wasteTypes.map(t => t.text) });
-        setRecyclingForm({ ...recyclingForm, name: '', registrationNumber: '', tonnage: '', wasteTypes: [], destination: '', supervisor: '' });
-      } else {
-        await addBWMTDelivery({ ...bwmtForm, wasteTypes: bwmtForm.wasteTypes.map(t => t.text) });
-        setBwmtForm({ ...bwmtForm, tonnage: '', wasteTypes: [], supervisor: '' });
-      }
-      alert('Record submitted successfully!');
-    } catch (err) {
-      console.error(err);
-      alert('Error submitting report.');
-    }
-  };
-
-  const wasteOptionsEntry = [
-    { text: 'Glass (Aluminium)', value: 'glass' }, { text: 'Pet/Plastic bottles', value: 'pet' },
-    { text: 'Clear plastic', value: 'clear_plastic' }, { text: 'Cardboard', value: 'cardboard' },
-    { text: 'Rubber', value: 'rubber' }, { text: 'Sack', value: 'sack' }, { text: 'Metals', value: 'metals' }
+  const recyclingColumns = [
+    { key: 'name', label: 'Company / Owner', subKey: 'registrationNumber' },
+    { key: 'date', label: 'Date' },
+    { key: 'tonnage', label: 'Weight (t)', render: (val) => (
+      <span className="font-black text-primary">{val}t</span>
+    )},
+    { key: 'destination', label: 'Site' },
+    { key: 'supervisor', label: 'Supervisor' },
+    { key: 'status', label: 'Status', render: (val) => (
+      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+        val === 'Resolved' ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'
+      }`}>{val || 'Active'}</span>
+    )},
   ];
 
-  const wasteOptionsBWMT = [
-    { text: 'Food', value: 'food' }, { text: 'Garden', value: 'garden' },
-    { text: 'Paper', value: 'paper' }, { text: 'Textile', value: 'textile' },
-    { text: 'Nappies', value: 'nappies' }, { text: 'Metals', value: 'metals_bwmt' },
-    { text: 'Rubber & Leather', value: 'rubber_leather' }, { text: 'Glass', value: 'glass_bwmt' },
-    { text: 'Domestic', value: 'domestic' }, { text: 'Organic', value: 'organic' },
-    { text: 'Industrial SWM', value: 'industrial' }
+  const bwmtColumns = [
+    { key: 'month', label: 'Month' },
+    { key: 'date', label: 'Date' },
+    { key: 'tonnage', label: 'Tonnage (t)', render: (val) => (
+      <span className="font-black text-secondary">{val}t</span>
+    )},
+    { key: 'supervisor', label: 'Supervisor' },
+    { key: 'wasteTypes', label: 'Waste Categories', render: (val) => (
+      <span className="text-[11px] font-bold opacity-60">
+        {Array.isArray(val) ? val.join(', ') : val}
+      </span>
+    )},
   ];
-
-  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-headline font-black text-2xl text-on-surface uppercase tracking-tight">Landfill Activities</h1>
-        <p className="text-sm font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Operations & Waste Flow</p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div>
+        <h1 className="font-headline font-black text-xl md:text-2xl text-on-surface uppercase tracking-tight">Landfill Activities</h1>
+        <p className="text-[11px] font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Operations &amp; Waste Flow Records</p>
       </div>
 
-      <LandfillModule 
-        activeTab={activeTab} setActiveTab={setActiveTab}
-        recyclingForm={recyclingForm} setRecyclingForm={setRecyclingForm}
-        bwmtForm={bwmtForm} setBwmtForm={setBwmtForm}
-        supervisors={supervisors} sites={sites}
-        handleSubmit={handleSubmit}
-        wasteOptionsEntry={wasteOptionsEntry} wasteOptionsBWMT={wasteOptionsBWMT}
-        months={months}
+      {/* Tab switcher */}
+      <div className="flex gap-2 p-1 bg-surface-container/30 rounded-xl w-fit border border-outline-variant/10">
+        <button
+          onClick={() => setActiveTab('recycling')}
+          className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+            activeTab === 'recycling' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface'
+          }`}
+        >
+          Waste Recycling ({entries.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('bwmt')}
+          className={`px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+            activeTab === 'bwmt' ? 'bg-secondary text-on-secondary shadow-sm' : 'text-on-surface-variant/60 hover:text-on-surface'
+          }`}
+        >
+          BWMT Deliveries ({bwmtDeliveries.length})
+        </button>
+      </div>
+
+      {activeTab === 'recycling' ? (
+        <RecordListViewer
+          title="Recycling Entries"
+          subtitle="Waste Recycling Activity Log"
+          records={entries}
+          columns={recyclingColumns}
+          onRowClick={setSelectedRecord}
+        />
+      ) : (
+        <RecordListViewer
+          title="BWMT Deliveries"
+          subtitle="Bulawayo Waste Management Trust — Delivery Records"
+          records={bwmtDeliveries}
+          columns={bwmtColumns}
+          onRowClick={setSelectedRecord}
+        />
+      )}
+
+      <RecordDetailModal
+        record={selectedRecord}
+        title={activeTab === 'recycling' ? 'Recycling Entry' : 'BWMT Delivery'}
+        onClose={() => setSelectedRecord(null)}
       />
     </div>
   );

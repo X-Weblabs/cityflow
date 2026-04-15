@@ -91,7 +91,7 @@ const MultiSelect = ({
               exit={{ opacity: 0, y: direction === "up" ? -10 : 10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
               className={cn(
-                "absolute z-[200] left-0 w-full bg-surface-container-lowest border border-outline-variant/15 shadow-2xl rounded-xl p-1 max-h-[250px] overflow-y-auto custom-scrollbar",
+                "absolute z-[50] left-0 w-full bg-surface-container-lowest border border-outline-variant/15 shadow-2xl rounded-xl p-1 max-h-[250px] overflow-y-auto custom-scrollbar",
                 menuPosition
               )}
             >

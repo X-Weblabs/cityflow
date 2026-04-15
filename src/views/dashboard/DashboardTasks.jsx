@@ -14,6 +14,7 @@ const DashboardTasks = () => {
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [taskCategory, setTaskCategory] = useState('landfill');
   const [selectedTaskRecord, setSelectedTaskRecord] = useState(null);
+  const [actionTaken, setActionTaken] = useState('');
 
   useEffect(() => {
     const unsubEntries = subscribeToLandfillEntries(setEntries);
@@ -21,6 +22,12 @@ const DashboardTasks = () => {
     const unsubInspections = subscribeToInspections(setInspections);
     return () => { unsubEntries(); unsubDogs(); unsubInspections(); };
   }, []);
+
+  useEffect(() => {
+    if (selectedTaskRecord) {
+        setActionTaken(selectedTaskRecord.actionTaken || '');
+    }
+  }, [selectedTaskRecord]);
 
   const filterRecords = () => {
     let dataset = [];
@@ -44,17 +51,18 @@ const DashboardTasks = () => {
 
   const handleResolve = async (collectionName, id) => {
     if (window.confirm('Mark this record as resolved?')) {
-      await updateRecordStatus(collectionName, id, 'Resolved');
+      await updateRecordStatus(collectionName, id, 'Resolved', actionTaken);
       setSelectedTaskRecord(null);
+      setActionTaken('');
       alert('Record updated successfully.');
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-headline font-black text-2xl text-on-surface uppercase tracking-tight">Tasks Follow Up</h1>
-        <p className="text-sm font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Historical Record Resolution</p>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="font-headline font-black text-xl md:text-2xl text-on-surface uppercase tracking-tight">Tasks Follow Up</h1>
+        <p className="text-[11px] font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Historical Record Resolution</p>
       </div>
 
       <TaskFollowUpModule 
@@ -63,6 +71,8 @@ const DashboardTasks = () => {
         filterRecords={filterRecords}
         selectedTaskRecord={selectedTaskRecord} setSelectedTaskRecord={setSelectedTaskRecord}
         handleResolve={handleResolve}
+        actionTaken={actionTaken}
+        setActionTaken={setActionTaken}
       />
     </div>
   );

@@ -1,50 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { InvestigationModule } from '../../components/operator/TaskModules';
-import { addComplaintInvestigation, subscribeToComplaintInvestigations } from '../../services/db';
+import { subscribeToComplaintInvestigations } from '../../services/db';
+import { RecordListViewer } from '../../components/dashboard/RecordListViewer';
+import { RecordDetailModal } from '../../components/dashboard/RecordDetailModal';
 
 const DashboardInvestigations = () => {
   const [investigations, setInvestigations] = useState([]);
-  const [complaintForm, setComplaintForm] = useState({
-    complainantName: '',
-    category: 'Illegal Dumping',
-    location: '',
-    findings: '',
-    actionTaken: '',
-    date: format(new Date(), 'yyyy-MM-dd')
-  });
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     const unsub = subscribeToComplaintInvestigations(setInvestigations);
     return () => unsub();
   }, []);
 
-  const handleSubmit = async (e, type) => {
-    e.preventDefault();
-    try {
-      await addComplaintInvestigation(complaintForm);
-      setComplaintForm({ 
-        complainantName: '', category: 'Illegal Dumping', location: '', findings: '', actionTaken: '', 
-        date: format(new Date(), 'yyyy-MM-dd') 
-      });
-      alert('Investigation report submitted!');
-    } catch (err) {
-      console.error(err);
-      alert('Error submitting report.');
-    }
-  };
+  const columns = [
+    { key: 'complainantName', label: 'Complainant', subKey: 'location' },
+    { key: 'category', label: 'Category', render: (val) => (
+      <span className="px-2 py-0.5 rounded-full bg-surface-container-high text-[10px] font-black uppercase">
+        {val}
+      </span>
+    )},
+    { key: 'findings', label: 'Field Findings' },
+    { key: 'date', label: 'Date' },
+    { key: 'status', label: 'Status', render: (val) => (
+      <span className={`text-[10px] font-black uppercase ${val === 'Resolved' ? 'text-secondary' : 'text-primary'}`}>
+        {val || 'Pending'}
+      </span>
+    )}
+  ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-headline font-black text-2xl text-on-surface uppercase tracking-tight">Complaint Investigations</h1>
-        <p className="text-sm font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Citizen Grievance Resolution</p>
-      </div>
-
-      <InvestigationModule 
-        complaintForm={complaintForm}
-        setComplaintForm={setComplaintForm}
-        handleSubmit={handleSubmit}
+    <div className="max-w-7xl mx-auto">
+      <RecordListViewer 
+        title="Complaint Investigations"
+        subtitle="Citizen Grievance & Field Resolution Tracking"
+        records={investigations}
+        columns={columns}
+        onRowClick={setSelectedRecord}
+      />
+      <RecordDetailModal 
+        record={selectedRecord}
+        title="Investigation Record"
+        onClose={() => setSelectedRecord(null)}
       />
     </div>
   );

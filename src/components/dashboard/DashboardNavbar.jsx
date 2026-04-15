@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const cn = (...inputs) => twMerge(clsx(inputs));
 
@@ -40,8 +41,8 @@ const DashboardNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const primaryItems = navItems.slice(0, 4);
-  const secondaryItems = navItems.slice(4);
+  const primaryItems = navItems.slice(0, 3);
+  const secondaryItems = navItems.slice(3);
 
   return (
     <>
@@ -139,14 +140,14 @@ const DashboardNavbar = () => {
             to={item.path}
             end={item.end}
             className={({ isActive }) => cn(
-              "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all min-w-[56px]",
+              "flex flex-col items-center justify-center text-center gap-0.5 px-2 py-1.5 rounded-xl transition-all min-w-[64px]",
               isActive ? "text-primary bg-primary/5" : "text-on-surface-variant"
             )}
           >
             {({ isActive }) => (
               <>
-                <item.icon className={cn("w-5 h-5", isActive && "stroke-[2px]")} />
-                <span className="text-[9px] font-bold uppercase tracking-wider">{item.label}</span>
+                <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} />
+                <span className="text-[8.5px] font-black uppercase tracking-tighter leading-none">{item.label}</span>
               </>
             )}
           </NavLink>
@@ -155,44 +156,68 @@ const DashboardNavbar = () => {
         <button 
           onClick={() => setShowMore(!showMore)}
           className={cn(
-            "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all min-w-[56px]",
+            "flex flex-col items-center justify-center text-center gap-0.5 px-2 py-1.5 rounded-xl transition-all min-w-[64px]",
             showMore ? "text-primary bg-primary/5" : "text-on-surface-variant"
           )}
         >
           <MoreHorizontal className="w-5 h-5" />
-          <span className="text-[9px] font-bold uppercase tracking-wider">More</span>
+          <span className="text-[8.5px] font-black uppercase tracking-tighter leading-none">More</span>
         </button>
 
-        {/* More Menu Popover */}
-        {showMore && (
-          <div className="absolute bottom-[75px] right-4 bg-surface-container-lowest border border-outline-variant/15 shadow-2xl rounded-2xl p-2 min-w-[180px] animate-in slide-in-from-bottom-5 duration-300">
-            <div className="space-y-0.5">
-              {secondaryItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setShowMore(false)}
-                  className={({ isActive }) => cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all font-bold text-[13px]",
-                    isActive ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-surface-container"
-                  )}
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-              <div className="h-[1px] bg-outline-variant/5 my-1.5"></div>
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container font-bold text-[13px]">
-                <Settings className="w-4 h-4" />
-                <span>Settings</span>
-              </button>
-              <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-tertiary hover:bg-tertiary-container/10 font-bold text-[13px]">
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* More Menu — backdrop */}
+        <AnimatePresence>
+          {showMore && (
+            <motion.div 
+              key="more-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[110]" 
+              onClick={() => setShowMore(false)} 
+            />
+          )}
+        </AnimatePresence>
+
+        {/* More Menu — panel */}
+        <AnimatePresence>
+          {showMore && (
+            <motion.div 
+              key="more-panel"
+              initial={{ y: 20, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="absolute bottom-[75px] right-4 bg-surface-container-lowest border border-outline-variant/15 shadow-2xl rounded-2xl p-2 min-w-[200px] z-[120] overflow-hidden"
+            >
+              <div className="space-y-0.5">
+                {secondaryItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setShowMore(false)}
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-3 px-3 py-3 rounded-xl transition-all font-black text-[12px] uppercase tracking-wider",
+                      isActive ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-surface-container"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+                <div className="h-[1px] bg-outline-variant/5 my-2"></div>
+                <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container font-black text-[12px] uppercase tracking-wider">
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </button>
+                <button className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-tertiary hover:bg-tertiary-container/10 font-black text-[12px] uppercase tracking-wider">
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Mobile Top Header (Minimal) */}

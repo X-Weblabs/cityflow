@@ -1,57 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { DogNoticeModule } from '../../components/operator/DogNoticeModule';
-import { addDogNotice, subscribeToDogNotices } from '../../services/db';
+import { subscribeToDogNotices } from '../../services/db';
+import { RecordListViewer } from '../../components/dashboard/RecordListViewer';
+import { RecordDetailModal } from '../../components/dashboard/RecordDetailModal';
 
 const DashboardDogNotice = () => {
   const [dogNotices, setDogNotices] = useState([]);
-  const [dogForm, setDogForm] = useState({
-    ownerName: '',
-    address: '',
-    dogDescription: '',
-    noticeType: 'Unlicensed',
-    actionTaken: '',
-    date: format(new Date(), 'yyyy-MM-dd')
-  });
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     const unsub = subscribeToDogNotices(setDogNotices);
     return () => unsub();
   }, []);
 
-  const handleSubmit = async (e, type) => {
-    e.preventDefault();
-    try {
-      await addDogNotice(dogForm);
-      setDogForm({ 
-        ownerName: '', 
-        address: '', 
-        dogDescription: '', 
-        noticeType: 'Unlicensed', 
-        actionTaken: '', 
-        date: format(new Date(), 'yyyy-MM-dd') 
-      });
-      alert('Dog notice submitted successfully!');
-    } catch (err) {
-      console.error(err);
-      alert('Error submitting report.');
-    }
-  };
+  const columns = [
+    { key: 'ownerName', label: 'Owner Name', subKey: 'address' },
+    { key: 'noticeType', label: 'Notice Type', render: (val) => (
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+        val === 'Dangerous Dog' ? 'bg-error/10 text-error' : 
+        val === 'Unlicensed' ? 'bg-warning/10 text-warning' : 'bg-secondary/10 text-secondary'
+      }`}>{val}</span>
+    )},
+    { key: 'dogDescription', label: 'Dog Description' },
+    { key: 'date', label: 'Issued Date' },
+    { key: 'status', label: 'Status', render: (val) => (
+      <span className={`text-[10px] font-black uppercase ${val === 'Resolved' ? 'text-secondary' : 'text-primary'}`}>
+        {val || 'Pending'}
+      </span>
+    )}
+  ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-headline font-black text-2xl text-on-surface uppercase tracking-tight">Dog Notice Management</h1>
-        <p className="text-sm font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Animal Control & Compliance</p>
-      </div>
-
-      <DogNoticeModule 
-        dogForm={dogForm} 
-        setDogForm={setDogForm} 
-        handleSubmit={handleSubmit} 
+    <div className="max-w-7xl mx-auto">
+      <RecordListViewer 
+        title="Dog Notice Management"
+        subtitle="Animal Control & Compliance Records"
+        records={dogNotices}
+        columns={columns}
+        onRowClick={setSelectedRecord}
       />
-      
-      {/* Optional: Add a history table below if needed, but the user just wanted the content from the operator screen */}
+      <RecordDetailModal 
+        record={selectedRecord}
+        title="Dog Notice"
+        onClose={() => setSelectedRecord(null)}
+      />
     </div>
   );
 };

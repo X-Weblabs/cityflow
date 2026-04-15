@@ -1,49 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { InspectionModule } from '../../components/operator/InspectionModule';
-import { addInspection, subscribeToInspections } from '../../services/db';
+import { subscribeToInspections } from '../../services/db';
+import { RecordListViewer } from '../../components/dashboard/RecordListViewer';
+import { RecordDetailModal } from '../../components/dashboard/RecordDetailModal';
 
 const DashboardInspections = () => {
   const [inspections, setInspections] = useState([]);
-  const [inspectionForm, setInspectionForm] = useState({
-    facilityName: '',
-    location: '',
-    inspectionType: 'Routine',
-    condition: '3',
-    issues: '',
-    inspectorName: 'John Smith'
-  });
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     const unsub = subscribeToInspections(setInspections);
     return () => unsub();
   }, []);
 
-  const handleSubmit = async (e, type) => {
-    e.preventDefault();
-    try {
-      await addInspection(inspectionForm);
-      setInspectionForm({ 
-        facilityName: '', location: '', inspectionType: 'Routine', condition: '3', issues: '', 
-        inspectorName: 'John Smith' 
-      });
-      alert('Inspection report submitted!');
-    } catch (err) {
-      console.error(err);
-      alert('Error submitting report.');
-    }
-  };
+  const columns = [
+    { key: 'facilityName', label: 'Facility Name', subKey: 'location' },
+    { key: 'inspectionType', label: 'Type' },
+    { key: 'condition', label: 'Condition', render: (val) => (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map(star => (
+          <div key={star} className={`w-2 h-2 rounded-full ${star <= parseInt(val) ? 'bg-secondary' : 'bg-surface-container-highest'}`} />
+        ))}
+        <span className="text-[10px] font-bold ml-1">{val}/5</span>
+      </div>
+    )},
+    { key: 'inspectorName', label: 'Inspector' },
+    { key: 'status', label: 'Status', render: (val) => (
+      <span className={`text-[10px] font-black uppercase ${val === 'Resolved' ? 'text-secondary' : 'text-primary'}`}>
+        {val || 'Pending'}
+      </span>
+    )}
+  ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="font-headline font-black text-2xl text-on-surface uppercase tracking-tight">Public Convenience & Inspection</h1>
-        <p className="text-sm font-bold text-on-surface-variant opacity-60 uppercase tracking-widest">Facility Health & Safety</p>
-      </div>
-
-      <InspectionModule 
-        inspectionForm={inspectionForm}
-        setInspectionForm={setInspectionForm}
-        handleSubmit={handleSubmit}
+    <div className="max-w-7xl mx-auto">
+      <RecordListViewer 
+        title="Facility Inspections"
+        subtitle="Public Convenience Health & Safety Audit"
+        records={inspections}
+        columns={columns}
+        onRowClick={setSelectedRecord}
+      />
+      <RecordDetailModal 
+        record={selectedRecord}
+        title="Inspection Record"
+        onClose={() => setSelectedRecord(null)}
       />
     </div>
   );

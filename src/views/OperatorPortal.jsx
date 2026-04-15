@@ -357,6 +357,7 @@ const OperatorPortal = () => {
         activeSection={activeSection} 
         setActiveSection={setActiveSection} 
         selectedVehicle={selectedVehicle} 
+        className="hidden lg:flex"
       />
       
       <div className="flex-1 flex flex-col min-w-0">
@@ -380,30 +381,36 @@ const OperatorPortal = () => {
         </main>
       </div>
       
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay — backdrop and drawer are separate keyed children */}
       <AnimatePresence>
         {isMobileSidebarOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] lg:hidden"
+          <motion.div 
+            key="sidebar-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsMobileSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isMobileSidebarOpen && (
+          <motion.div
+            key="sidebar-drawer"
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'tween', duration: 0.25 }}
+            className="fixed top-0 left-0 bottom-0 w-[260px] bg-surface-container-lowest z-[120] lg:hidden shadow-2xl"
+          >
+            <OperatorSidebar 
+              activeSection={activeSection} 
+              setActiveSection={(s) => { setActiveSection(s); setIsMobileSidebarOpen(false); }} 
+              selectedVehicle={selectedVehicle} 
             />
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              className="fixed top-0 left-0 bottom-0 w-[260px] bg-surface-container-lowest z-[120] lg:hidden"
-            >
-               <OperatorSidebar 
-                activeSection={activeSection} 
-                setActiveSection={(s) => { setActiveSection(s); setIsMobileSidebarOpen(false); }} 
-                selectedVehicle={selectedVehicle} 
-              />
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

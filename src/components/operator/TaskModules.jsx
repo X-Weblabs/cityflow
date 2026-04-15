@@ -30,7 +30,9 @@ export const TaskFollowUpModule = ({
   filterRecords, 
   selectedTaskRecord, 
   setSelectedTaskRecord, 
-  handleResolve 
+  handleResolve,
+  actionTaken,
+  setActionTaken
 }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
@@ -100,27 +102,42 @@ export const TaskFollowUpModule = ({
               <h3 className="text-xl font-headline font-black text-on-surface mb-1">{selectedTaskRecord.name || selectedTaskRecord.ownerName || selectedTaskRecord.facilityName}</h3>
               <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Reference ID: {selectedTaskRecord.id}</p>
             </div>
-            <div className="grid grid-cols-2 gap-6 py-4 border-y border-outline-variant/5">
-              {Object.entries(selectedTaskRecord).filter(([k]) => !['id', 'createdAt', '_coll', 'status'].includes(k)).map(([k, v]) => (
+            <div className="grid grid-cols-2 gap-6 py-4 border-y border-outline-variant/5 max-h-[160px] overflow-y-auto custom-scrollbar">
+              {Object.entries(selectedTaskRecord).filter(([k]) => !['id', 'createdAt', '_coll', 'status', 'updatedAt', 'actionTaken'].includes(k)).map(([k, v]) => (
                 <div key={k}>
                   <p className="text-[9px] font-black uppercase tracking-tighter text-on-surface-variant/40 mb-1">{k.replace(/([A-Z])/g, ' $1')}</p>
                   <p className="text-[12px] font-bold text-on-surface truncate">{Array.isArray(v) ? v.join(', ') : v}</p>
                 </div>
               ))}
             </div>
-            {selectedTaskRecord.status !== 'Resolved' ? (
-              <button 
-                onClick={() => handleResolve(selectedTaskRecord._coll, selectedTaskRecord.id)}
-                className="w-full bg-secondary text-on-secondary py-3.5 rounded-xl font-black text-[12px] uppercase tracking-[0.2em] shadow-lg shadow-secondary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="w-4 h-4" />
-                Mark as Resolved
-              </button>
-            ) : (
-              <div className="w-full border-2 border-dashed border-secondary/20 p-4 rounded-xl text-center text-secondary font-black text-[10px] uppercase tracking-widest">
-                This item has been resolved
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant/60 ml-1">Resolution / Action Taken</label>
+                <textarea 
+                  value={actionTaken}
+                  onChange={(e) => setActionTaken(e.target.value)}
+                  placeholder="Describe the steps taken to resolve this task..."
+                  disabled={selectedTaskRecord.status === 'Resolved'}
+                  className="w-full bg-surface-container border border-outline-variant/10 rounded-xl p-3 text-[12px] font-bold text-on-surface min-h-[100px] focus:ring-2 focus:ring-primary/20 outline-none transition-all disabled:opacity-50"
+                />
               </div>
-            )}
+
+              {selectedTaskRecord.status !== 'Resolved' ? (
+                <button 
+                  onClick={() => handleResolve(selectedTaskRecord._coll, selectedTaskRecord.id)}
+                  disabled={!actionTaken?.trim()}
+                  className="w-full bg-secondary text-on-secondary py-3.5 rounded-xl font-black text-[12px] uppercase tracking-[0.2em] shadow-lg shadow-secondary/20 hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Complete Resolution
+                </button>
+              ) : (
+                <div className="w-full border-2 border-dashed border-secondary/20 p-4 rounded-xl text-center text-secondary font-black text-[10px] uppercase tracking-widest">
+                  This item has been resolved
+                </div>
+              )}
+            </div>
           </motion.div>
         ) : (
           <div className="hidden lg:flex h-full min-h-[400px] items-center justify-center border-2 border-dashed border-outline-variant/10 rounded-xl opacity-30">

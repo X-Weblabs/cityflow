@@ -365,10 +365,14 @@ export const subscribeToSupervisorComplaints = (callback) => {
 /**
  * Update the status of any record in any collection
  */
-export const updateRecordStatus = async (collectionName, recordId, status) => {
+export const updateRecordStatus = async (collectionName, recordId, status, actionTaken = null) => {
   const docRef = doc(db, collectionName, recordId);
-  await updateDoc(docRef, {
+  const updates = {
     status,
     updatedAt: serverTimestamp()
-  });
+  };
+  if (actionTaken !== null) {
+    updates.actionTaken = actionTaken;
+  }
+  await updateDoc(docRef, updates);
 };
